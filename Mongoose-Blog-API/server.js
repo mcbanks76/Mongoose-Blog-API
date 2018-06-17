@@ -34,13 +34,99 @@ app.get('/posts/:id', (req, res) => {
       res.status(500).json({ error: 'something went horribly awry' });
     });
 });
-//app.post
-//app.put
-//app.delete
 
-// this function closes the server, and returns a promise. we'll
-// use it in our integration tests later.
-//ripped from the tutorial
+app.post('/posts'), (req,res) => {
+  const requiredFields = ['title', 'content', 'author'];
+  for (let i = 0; i <requiredFields.length; i++) {
+    const fields = requiredFields[i];
+    if (!(fields in req.body))  {
+      const message = `Missing \ `${field}` in your post.`;
+      console.error (message);
+      return res.status(400).send(message);
+    }
+  }
+  BlogPost
+  .create({
+    title: req.body.title,
+    content: req.body.content,
+    author: req.body.author
+  })
+
+  .then(blogPost => res.status(201).json(blogPost.serialize()))
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({ error: 'Something is wrong'});
+    });
+
+};
+
+app.put('/posts/:id', (req, res) => {
+  if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
+    res.status(400).json({
+      error: 'ID and request body ID values must match. Try Again.'
+    });
+  }
+
+  const updated = {};
+  const updateableFields = ['title', 'content', 'author'];
+  updateableFields.forEach(field => {
+    if (field in req.body) {
+      updated[field] = req.body[field];
+    }
+  });
+
+  BlogPost
+    .findByIdAndUpdate(req.params.id, { $set: updated }, { new: true })
+    .then(updatedPost => res.status(204).end())
+    .catch(err => res.status(500).json({ message: 'Something went wrong' }));
+});
+
+app.delete('/posts/:id', (req, res) => {
+  BlogPost
+    .findByIdAndRemove(req.params.id)
+    .then(() => {
+      res.status(204).json({ message: 'success' });
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({ error: 'something went terribly wrong' });
+    });
+});
+
+app.delete('/:id', (req, res) => {
+  BlogPost
+    .findByIdAndRemove(req.params.id)
+    .then(() => {
+      console.log(`Deleted blog post with id \`${req.params.id}\``);
+      res.status(204).end();
+    });
+});
+
+app.use('*', function (req, res) {
+  res.status(404).json({ message: 'Not Found' });
+});
+
+let server;
+
+function openServer(databaseUrl, port = PORT) {
+
+   return new Promise((resolve, reject) => {
+    mongoose.connect(databaseUrl, err => {
+      if (err) {
+        return reject(err);
+      }
+      server = app.listen(port, () => {
+        console.log(`Your app is listening on port ${port}`);
+        resolve();
+      })
+        .on('error', err => {
+          mongoose.disconnect();
+          reject(err);
+        });
+    });
+  });
+}
+
 function closeServer() {
   return mongoose.disconnect().then(() => {
     return new Promise((resolve, reject) => {
